@@ -1,3 +1,7 @@
+[![100% AI Generated](https://img.shields.io/badge/100%25-AI_Generated-blueviolet?style=for-the-badge&logo=openai&logoColor=white)](https://github.com)
+
+> **Note :** Ce projet a été intégralement conçu, développé et rédigé par une Intelligence Artificielle.
+
 # Ensembles météo : archivage automatique
 
 Un workflow GitHub Actions récupère 4 fois par jour les prévisions d'ensemble
