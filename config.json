@@ -1,0 +1,12 @@
+{
+  "locations": [
+    {"name": "paris", "latitude": 48.8566, "longitude": 2.3522}
+  ],
+  "variables": ["temperature_2m", "precipitation", "wind_speed_10m"],
+  "models": [
+    {"id": "ecmwf_ifs025", "forecast_days": 15},
+    {"id": "gfs025", "forecast_days": 16},
+    {"id": "icon_global", "forecast_days": 7}
+  ],
+  "output_dir": "data"
+}
