@@ -1,0 +1,66 @@
+name: Fetch ensemble forecasts
+
+on:
+  schedule:
+    # 4 fois par jour (heures UTC : 0, 6, 12, 18), décalé de 20 minutes
+    # pour éviter la congestion de GitHub à l'heure pile.
+    - cron: "20 0,6,12,18 * * *"
+  workflow_dispatch:  # lancement manuel depuis l'onglet Actions
+
+permissions:
+  contents: write
+
+# Jamais deux exécutions en parallèle (évite les conflits de push).
+concurrency:
+  group: fetch-ensemble
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Si un modèle échoue, on commit quand même les autres snapshots,
+      # puis le job est marqué en échec à la dernière étape.
+      - name: Fetch ensembles
+        id: fetch
+        continue-on-error: true
+        run: python fetch_ensemble.py
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "Aucun nouveau snapshot à enregistrer."
+            exit 0
+          fi
+          git commit -m "data: snapshots $(date -u +'%Y-%m-%d %H:%MZ')"
+          for attempt in 1 2 3 4; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push échoué (tentative ${attempt}), nouvel essai..."
+            sleep $((attempt * 5))
+          done
+          echo "Impossible de pousser après 4 tentatives."
+          exit 1
+
+      - name: Fail if some fetches failed
+        if: steps.fetch.outcome == 'failure'
+        run: |
+          echo "Au moins un appel a échoué : voir l'étape 'Fetch ensembles'."
+          exit 1
